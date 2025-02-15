@@ -1,47 +1,123 @@
 <script lang="ts">
-  import svelteLogo from './assets/svelte.svg'
-  import viteLogo from '/vite.svg'
-  import Counter from './lib/Counter.svelte'
+  let mode: "preview" | "auto" = "preview";
+  let refreshCount = 0;
+  let refreshLimit = 0;
+  let url = "";
+  let status = "";
+  let iframeSrc = "";
+  
+  let refreshInterval: number;
+
+  function setMode(selectedMode: "preview" | "auto") {
+    mode = selectedMode;
+    if (refreshInterval) clearInterval(refreshInterval);
+  }
+
+  function loadWebsite() {
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      alert("Please enter a valid URL");
+      return;
+    }
+    iframeSrc = url;
+    status = "";
+    
+    if (mode === "auto") {
+      startAutoRefresh();
+    }
+  }
+
+  function startAutoRefresh() {
+    refreshCount = 0;
+    const limit = Number(refreshLimit) || Infinity;
+    
+    refreshInterval = setInterval(() => {
+      if (refreshCount >= limit) {
+        clearInterval(refreshInterval);
+        status = "Refresh limit reached";
+        return;
+      }
+      
+      iframeSrc += "";
+      refreshCount++;
+      status = `Refreshed ${refreshCount} times`;
+    }, 5000);
+  }
+
+  import { onDestroy } from 'svelte';
+  onDestroy(() => {
+    if (refreshInterval) clearInterval(refreshInterval);
+  });
 </script>
 
-<main>
-  <div>
-    <a href="https://vite.dev" target="_blank" rel="noreferrer">
-      <img src={viteLogo} class="logo" alt="Vite Logo" />
-    </a>
-    <a href="https://svelte.dev" target="_blank" rel="noreferrer">
-      <img src={svelteLogo} class="logo svelte" alt="Svelte Logo" />
-    </a>
+<main class="bg-gray-100 min-w-screen min-h-screen flex items-center justify-center">
+  <div class="w-3/5 h-3/5 p-6 bg-white rounded-lg shadow-lg">
+    <h1 class="text-3xl font-bold mb-6 text-center text-blue-700">Web Preview</h1>
+    
+    <div class="flex justify-between items-center mb-4">
+      <input
+        type="text"
+        bind:value={url}
+        class="flex-1 px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+        placeholder="Please enter a website URL"
+      />
+      <button
+        on:click={loadWebsite}
+        class="ml-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+      >
+        Loading Website
+      </button>
+    </div>
+
+    <div class="flex justify-center space-x-4 mb-4">
+      <button
+        on:click={() => setMode('preview')}
+        class:bg-green-700={mode === 'preview'}
+        class:text-white={mode === 'preview'}
+        class="mode-btn px-4 py-2 rounded-md border"
+      >
+        View
+      </button>
+      <button
+        on:click={() => setMode('auto')}
+        class:bg-green-700={mode === 'auto'}
+        class:text-white={mode === 'auto'}
+        class="mode-btn px-4 py-2 rounded-md border"
+      >
+        Auto Refresh
+      </button>
+    </div>
+
+    {#if mode === 'auto'}
+      <div class="mb-4">
+        <label class="block text-gray-700 mb-2" for="refreshLimit">Refresh count:</label>
+        <input
+          id="refreshLimit"
+          type="number"
+          bind:value={refreshLimit}
+          class="w-full px-4 py-2 border rounded-md"
+          min="0"
+          placeholder="Enter the number of refreshes"
+        />
+      </div>
+    {/if}
+
+    <div class="iframe-container bg-gray-700">
+      <iframe src={iframeSrc} title="Website Preview" 
+        class="w-full h-full"
+      ></iframe>
+    </div>
+
+    {#if status}
+      <p class="text-center mt-4 text-gray-700">{status}</p>
+    {/if}
   </div>
-  <h1>Vite + Svelte</h1>
-
-  <div class="card">
-    <Counter />
-  </div>
-
-  <p>
-    Check out <a href="https://github.com/sveltejs/kit#readme" target="_blank" rel="noreferrer">SvelteKit</a>, the official Svelte app framework powered by Vite!
-  </p>
-
-  <p class="read-the-docs">
-    Click on the Vite and Svelte logos to learn more
-  </p>
 </main>
 
 <style>
-  .logo {
-    height: 6em;
-    padding: 1.5em;
-    will-change: filter;
-    transition: filter 300ms;
-  }
-  .logo:hover {
-    filter: drop-shadow(0 0 2em #646cffaa);
-  }
-  .logo.svelte:hover {
-    filter: drop-shadow(0 0 2em #ff3e00aa);
-  }
-  .read-the-docs {
-    color: #888;
+  .iframe-container {
+    width: 100%;
+    padding-top: 56.25%;
+    border-radius: 12px;
+    overflow: hidden;
   }
 </style>
