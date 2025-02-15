@@ -1,60 +1,63 @@
 <script lang="ts">
-  let mode: "preview" | "auto" = "preview";
-  let refreshCount = 0;
-  let refreshLimit = 0;
+  import Header from "./components/Header.svelte";
+  import ControlPanel from "./components/ControlPanel.svelte";
+  import PreviewPanel from "./components/PreviewPanel.svelte";
+
   let url = "";
   let status = "";
   let iframeSrc = "";
+  let autoRefresh = false;
+  let refreshTimeout: number;
 
-  let refreshInterval: number;
-
-  function isValidUrl(url: string): boolean {
-    const urlPattern = /^(https?:\/\/)[\w.-]+(?:\/.*)?$/;
-    return urlPattern.test(url);
-  }
-
-  function setMode(selectedMode: "preview" | "auto") {
-    mode = selectedMode;
-    if (refreshInterval) {
-      clearInterval(refreshInterval);
-      refreshInterval = 0;
-    }
-    if (mode === "auto") {
-      startAutoRefresh();
-    }
+  function handleUrlUpdate(event: CustomEvent<string>) {
+    url = event.detail;
+    console.log("URL updated:", url);
   }
 
   function loadWebsite() {
-    if (!isValidUrl(url)) {
-      alert("Please enter a valid URL");
+    console.log("Loading website with URL:", url);
+    if (!url) {
+      console.warn("URL is empty");
       return;
     }
-    iframeSrc = url;
-    status = "";
 
-    if (mode === "auto") {
+    iframeSrc = url;
+    status = "正在加载...";
+
+    const iframe = document.querySelector("iframe");
+    if (iframe) {
+      iframe.onerror = () => {
+        status = "由于浏览器的安全策略，某些网站可能无法在iframe中预览。";
+      };
+      iframe.onload = () => {
+        status = "加载成功";
+      };
+    }
+
+    if (autoRefresh) {
       startAutoRefresh();
+    }
+  }
+
+  function handleAutoRefreshChange(enabled: boolean) {
+    autoRefresh = enabled;
+    if (enabled && url) {
+      startAutoRefresh();
+    } else if (!enabled && refreshTimeout) {
+      clearTimeout(refreshTimeout);
+      refreshTimeout = 0;
     }
   }
 
   function startAutoRefresh() {
-    refreshCount = 0;
-    const limit = Number(refreshLimit) || Infinity;
+    if (refreshTimeout) {
+      clearTimeout(refreshTimeout);
+    }
 
     function refreshIframe() {
-      if (refreshCount >= limit) {
-        clearInterval(refreshInterval);
-        status = "Refresh limit reached";
-        return;
-      }
-
       iframeSrc = `${url}?timestamp=${new Date().getTime()}`;
-      refreshCount++;
-      status = `Refreshed ${refreshCount} times`;
-
       const randomInterval = Math.floor(Math.random() * 10 + 5) * 1000;
-
-      setTimeout(refreshIframe, randomInterval);
+      refreshTimeout = setTimeout(refreshIframe, randomInterval);
     }
 
     refreshIframe();
@@ -62,89 +65,26 @@
 
   import { onDestroy } from "svelte";
   onDestroy(() => {
-    if (refreshInterval) clearInterval(refreshInterval);
+    if (refreshTimeout) clearTimeout(refreshTimeout);
   });
+
+  $: {
+    console.log("URL changed:", url);
+  }
 </script>
 
-<main
-  class="bg-gray-100 min-w-screen min-h-screen flex items-center justify-center"
->
-  <div class="w-3/5 h-3/5 p-6 bg-white rounded-lg shadow-lg">
-    <h1 class="text-3xl font-bold mb-6 text-center text-blue-700">
-      Web Preview
-    </h1>
-
-    <div class="flex justify-between items-center mb-4">
-      <input
-        type="text"
-        bind:value={url}
-        class="flex-1 px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
-        placeholder="Please enter a website URL"
-      />
-      <button
-        on:click={loadWebsite}
-        class="ml-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-      >
-        Loading Website
-      </button>
-    </div>
-    <div class="flex justify-center space-x-4 mb-4">
-      <button
-        on:click={() => setMode("preview")}
-        class="mode-btn px-4 py-2 rounded-md border"
-        class:bg-green-700={mode === "preview"}
-        class:text-white={mode === "preview"}
-      >
-        View
-      </button>
-      <button
-        on:click={() => setMode("auto")}
-        class="mode-btn px-4 py-2 rounded-md border"
-        class:bg-green-700={mode === "auto"}
-        class:text-white={mode === "auto"}
-      >
-        Auto Refresh
-      </button>
-    </div>
-    {#if mode === "auto"}
-      <div class="mb-4">
-        <label class="block text-gray-700 mb-2" for="refreshLimit"
-          >Refresh count:</label
-        >
-        <input
-          id="refreshLimit"
-          type="number"
-          bind:value={refreshLimit}
-          class="w-full px-4 py-2 border rounded-md"
-          min="0"
-          placeholder="Enter the number of refreshes"
-        />
-      </div>
-    {/if}
-    <div class="iframe-container bg-gray-700">
-      <iframe src={iframeSrc} title="Website Preview" class="w-full h-full"
-      ></iframe>
-    </div>
-    {#if status}
-      <p class="text-center mt-4 text-gray-700">{status}</p>
-    {/if}
+<main class="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+  <div class="container mx-auto max-w-5xl px-4 py-8">
+    <Header {url} onLoadWebsite={loadWebsite} on:urlUpdate={handleUrlUpdate} />
+    <ControlPanel {autoRefresh} onAutoRefreshChange={handleAutoRefreshChange} />
+    <PreviewPanel {iframeSrc} {status} />
   </div>
 </main>
 
 <style>
-  .iframe-container {
-    position: relative;
-    width: 100%;
-    height: 400px;
-    border-radius: 12px;
-    overflow: hidden;
-  }
-  .iframe-container iframe {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border: none;
+  :global(body) {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
   }
 </style>
