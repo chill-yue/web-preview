@@ -5,22 +5,33 @@
   let url = "";
   let status = "";
   let iframeSrc = "";
-  
+
   let refreshInterval: number;
+
+  function isValidUrl(url: string): boolean {
+    const urlPattern = /^(https?:\/\/)[\w.-]+(?:\/.*)?$/;
+    return urlPattern.test(url);
+  }
 
   function setMode(selectedMode: "preview" | "auto") {
     mode = selectedMode;
-    if (refreshInterval) clearInterval(refreshInterval);
+    if (refreshInterval) {
+      clearInterval(refreshInterval);
+      refreshInterval = 0;
+    }
+    if (mode === "auto") {
+      startAutoRefresh();
+    }
   }
 
   function loadWebsite() {
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    if (!isValidUrl(url)) {
       alert("Please enter a valid URL");
       return;
     }
     iframeSrc = url;
     status = "";
-    
+
     if (mode === "auto") {
       startAutoRefresh();
     }
@@ -29,30 +40,40 @@
   function startAutoRefresh() {
     refreshCount = 0;
     const limit = Number(refreshLimit) || Infinity;
-    
-    refreshInterval = setInterval(() => {
+
+    function refreshIframe() {
       if (refreshCount >= limit) {
         clearInterval(refreshInterval);
         status = "Refresh limit reached";
         return;
       }
-      
-      iframeSrc += "";
+
+      iframeSrc = `${url}?timestamp=${new Date().getTime()}`;
       refreshCount++;
       status = `Refreshed ${refreshCount} times`;
-    }, 5000);
+
+      const randomInterval = Math.floor(Math.random() * 10 + 5) * 1000;
+
+      setTimeout(refreshIframe, randomInterval);
+    }
+
+    refreshIframe();
   }
 
-  import { onDestroy } from 'svelte';
+  import { onDestroy } from "svelte";
   onDestroy(() => {
     if (refreshInterval) clearInterval(refreshInterval);
   });
 </script>
 
-<main class="bg-gray-100 min-w-screen min-h-screen flex items-center justify-center">
+<main
+  class="bg-gray-100 min-w-screen min-h-screen flex items-center justify-center"
+>
   <div class="w-3/5 h-3/5 p-6 bg-white rounded-lg shadow-lg">
-    <h1 class="text-3xl font-bold mb-6 text-center text-blue-700">Web Preview</h1>
-    
+    <h1 class="text-3xl font-bold mb-6 text-center text-blue-700">
+      Web Preview
+    </h1>
+
     <div class="flex justify-between items-center mb-4">
       <input
         type="text"
@@ -67,29 +88,29 @@
         Loading Website
       </button>
     </div>
-
     <div class="flex justify-center space-x-4 mb-4">
       <button
-        on:click={() => setMode('preview')}
-        class:bg-green-700={mode === 'preview'}
-        class:text-white={mode === 'preview'}
+        on:click={() => setMode("preview")}
         class="mode-btn px-4 py-2 rounded-md border"
+        class:bg-green-700={mode === "preview"}
+        class:text-white={mode === "preview"}
       >
         View
       </button>
       <button
-        on:click={() => setMode('auto')}
-        class:bg-green-700={mode === 'auto'}
-        class:text-white={mode === 'auto'}
+        on:click={() => setMode("auto")}
         class="mode-btn px-4 py-2 rounded-md border"
+        class:bg-green-700={mode === "auto"}
+        class:text-white={mode === "auto"}
       >
         Auto Refresh
       </button>
     </div>
-
-    {#if mode === 'auto'}
+    {#if mode === "auto"}
       <div class="mb-4">
-        <label class="block text-gray-700 mb-2" for="refreshLimit">Refresh count:</label>
+        <label class="block text-gray-700 mb-2" for="refreshLimit"
+          >Refresh count:</label
+        >
         <input
           id="refreshLimit"
           type="number"
@@ -100,13 +121,10 @@
         />
       </div>
     {/if}
-
     <div class="iframe-container bg-gray-700">
-      <iframe src={iframeSrc} title="Website Preview" 
-        class="w-full h-full"
+      <iframe src={iframeSrc} title="Website Preview" class="w-full h-full"
       ></iframe>
     </div>
-
     {#if status}
       <p class="text-center mt-4 text-gray-700">{status}</p>
     {/if}
@@ -117,11 +135,10 @@
   .iframe-container {
     position: relative;
     width: 100%;
-    padding-top: 56.25%;
+    height: 400px;
     border-radius: 12px;
     overflow: hidden;
   }
-
   .iframe-container iframe {
     position: absolute;
     top: 0;
@@ -130,5 +147,4 @@
     height: 100%;
     border: none;
   }
-
 </style>
