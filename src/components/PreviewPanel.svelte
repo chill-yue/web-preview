@@ -27,9 +27,11 @@
 <style>
   .preview-container {
     width: 100%;
-    padding: 1rem;
+    padding: 0.5rem;
     height: 80vh;
     min-height: 600px;
+    max-width: 1600px;
+    margin: 0 auto;
   }
 
   .iframe-wrapper {

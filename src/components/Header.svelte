@@ -7,12 +7,10 @@
 
   function handleSubmit(e: Event) {
     e.preventDefault();
-    // 确保url值已更新
     if (url.trim() === "") {
       alert("请输入有效的网站URL");
       return;
     }
-    // 添加http前缀（如果没有）
     if (!url.startsWith("http://") && !url.startsWith("https://")) {
       url = "https://" + url;
     }
@@ -28,7 +26,7 @@
 </script>
 
 <header class="w-full mb-8">
-  <h1 class="text-4xl font-light mb-8 text-center text-gray-900">
+  <h1 class="text-4xl font-semibold tracking-tight mb-8 text-center bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent font-['SF_Pro_Display',-apple-system,BlinkMacSystemFont,system-ui] antialiased">
     Web Preview
   </h1>
   <form
