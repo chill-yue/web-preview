@@ -4,22 +4,62 @@
 
   let refreshMode = "fast";
   let countdown = 0;
-  let countdownInterval: number;
+  let countdownInterval: number | null = null;
   let customMinInterval = 5;
   let customMaxInterval = 10;
   let isRunning = false;
 
+  // 定义不同模式的时间间隔配置
+  type IntervalConfig = { min: number; max: number };
+  type ModeIntervals = {
+    [key: string]: IntervalConfig;
+  };
+
+  const modeIntervals: ModeIntervals = {
+    fast: { min: 5, max: 10 },
+    slow: { min: 20, max: 25 },
+    custom: { min: customMinInterval, max: customMaxInterval },
+  };
+
+  // 获取当前模式的时间间隔
+  function getCurrentIntervals(): IntervalConfig {
+    if (refreshMode === "custom") {
+      return { min: customMinInterval, max: customMaxInterval };
+    }
+    return modeIntervals[refreshMode];
+  }
+
+  // 生成随机间隔时间
+  function generateInterval() {
+    const { min, max } = getCurrentIntervals();
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  // 重置定时器
+  function resetTimer() {
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+    }
+    if (isRunning && autoRefresh) {
+      countdown = generateInterval();
+      startCountdown();
+    }
+  }
+
   function handleAutoRefreshChange() {
-    onAutoRefreshChange(autoRefresh, refreshMode);
     if (!autoRefresh) {
       stopRefresh();
+    } else {
+      // 仅通知状态改变，不启动刷新
+      onAutoRefreshChange(autoRefresh, refreshMode);
     }
   }
 
   function handleRefreshModeChange() {
-    if (autoRefresh && isRunning) {
+    if (autoRefresh) {
+      resetTimer();
       onAutoRefreshChange(autoRefresh, refreshMode);
-      startCountdown();
     }
   }
 
@@ -27,47 +67,35 @@
     if (customMinInterval > customMaxInterval) {
       customMaxInterval = customMinInterval;
     }
-    if (autoRefresh && isRunning && refreshMode === "custom") {
-      startCountdown();
+    if (autoRefresh && refreshMode === "custom") {
+      resetTimer();
     }
   }
 
   function startRefresh() {
     if (!isRunning && autoRefresh) {
       isRunning = true;
-      startCountdown();
+      resetTimer();
     }
   }
 
   function stopRefresh() {
     isRunning = false;
-    clearInterval(countdownInterval);
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+    }
     countdown = 0;
   }
 
   function startCountdown() {
-    clearInterval(countdownInterval);
-    let minInterval = 5;
-    let maxInterval = 10;
+    if (countdownInterval) return;
 
-    if (refreshMode === "slow") {
-      minInterval = 20;
-      maxInterval = 25;
-    } else if (refreshMode === "custom") {
-      minInterval = customMinInterval;
-      maxInterval = customMaxInterval;
-    }
-
-    const interval =
-      Math.floor(Math.random() * (maxInterval - minInterval + 1)) + minInterval;
-    countdown = interval;
     countdownInterval = setInterval(() => {
       countdown--;
       if (countdown <= 0) {
-        const newInterval =
-          Math.floor(Math.random() * (maxInterval - minInterval + 1)) +
-          minInterval;
-        countdown = newInterval;
+        countdown = generateInterval();
+        onAutoRefreshChange(autoRefresh, refreshMode);
       }
     }, 1000);
   }
